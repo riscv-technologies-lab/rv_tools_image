@@ -30,6 +30,10 @@ RUN ./install_python.sh
 COPY ubuntu_22/install_nodejs.sh ./
 RUN ./install_nodejs.sh
 
+COPY ubuntu_22/install_scdt.sh ./
+RUN ./install_scdt.sh
+ENV SCDT_INSTALLATION_ROOT "/opt/sc-dt"
+
 COPY ubuntu_22/config_system.sh ./
 RUN ./config_system.sh
 
@@ -38,8 +42,8 @@ COPY license.md ./
 WORKDIR /root
 
 # See https://github.com/opencontainers/image-spec/blob/main/annotations.md
-LABEL org.opencontainers.image.authors="Nikita Rudenko"
-LABEL org.opencontainers.image.vendor="Nikita Rudenko"
+LABEL org.opencontainers.image.authors="Nikita Rudenko, Yuly Tarasov"
+LABEL org.opencontainers.image.vendor="Yuly Tarasov"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.title="Container image for C++ builds."
+LABEL org.opencontainers.image.title="Container image for RISC-V tools."
 LABEL org.opencontainers.image.base.name="ubuntu:22.04"

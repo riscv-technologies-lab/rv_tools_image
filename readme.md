@@ -2,31 +2,30 @@
 
 Container image for reproducible C++ builds targeting local and CI usage.
 
-[![GitHub Actions Status](https://github.com/rudenkornk/docker_cpp/actions/workflows/workflow.yml/badge.svg)](https://github.com/rudenkornk/cpp_image/actions)
-
 ## Using the image
 
 ```bash
 # Bootstrap
-podman run --interactive --tty --detach \
+docker run --interactive --tty --detach \
   --env "TERM=xterm-256color" `# colored terminal` \
   --mount type=bind,source="$(pwd)",target="$(pwd)" `# mount your repo` \
   --name cpp \
-  --userns keep-id `# keeps your non-root username` \
+  --ulimit nofile=1024:1024 `# workaround for valgrind` \
+  --user "$$(id -u ${USER}):$$(id -g ${USER})" `# keeps your non-root username` \
   --workdir "$HOME" `# podman sets homedir to the workdir for some reason` \
-  ghcr.io/rudenkornk/cpp_ubuntu:latest `# note: always pin here exact tag!`
-podman exec --user root cpp bash -c "chown $(id --user):$(id --group) $HOME"
+  ghcr.io/riscv-technologies-lab/rv_tools_image:latest `# note: always pin here exact tag!`
+docker exec --user root cpp bash -c "chown $(id --user):$(id --group) $HOME"
 
 # Execute single command
-podman exec --workdir "$(pwd)" cpp bash -c 'your_command'
+docker exec --workdir "$(pwd)" cpp bash -c 'your_command'
 
 # Attach to container
-podman exec --workdir "$(pwd)" --interactive --tty cpp bash
+docker exec --workdir "$(pwd)" --interactive --tty cpp bash
 ```
 
 ## Build
 
-**Requirements:** `podman >= 3.4.4`, `GNU Make >= 4.3`
+**Requirements:** `docker`, `GNU Make >= 4.3`
 
 ```bash
 make
