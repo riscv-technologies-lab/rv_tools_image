@@ -13,6 +13,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
   htop \
   less \
   lftp \
+  libncurses5 \
   ninja-build \
   openssh-client \
   openssh-server \
