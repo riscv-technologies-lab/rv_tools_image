@@ -18,4 +18,5 @@ DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
   openssh-client \
   openssh-server \
   sshpass \
+  sudo \
   vim \

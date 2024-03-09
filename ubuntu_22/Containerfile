@@ -38,8 +38,10 @@ COPY ubuntu_22/config_system.sh ./
 RUN ./config_system.sh
 
 COPY license.md ./
+COPY ubuntu_22/entrypoint.sh ./
 
 WORKDIR /root
+ENTRYPOINT ["/etc/configs/entrypoint.sh"]
 
 # See https://github.com/opencontainers/image-spec/blob/main/annotations.md
 LABEL org.opencontainers.image.authors="Nikita Rudenko, Yuly Tarasov"
