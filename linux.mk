@@ -203,10 +203,24 @@ $(BUILD_TESTS)/riscv-llvm/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS
 
 $(BUILD_TESTS)/riscv-qemu: $(BUILD_TESTS)/riscv-gcc/hello_world $(BUILD_TESTS)/riscv-llvm/hello_world
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c " \
-		${SCDT_INSTALLATION_ROOT}/tools/bin/qemu-riscv64 ./(BUILD_TESTS)/riscv-gcc/hello_world && \
-		${SCDT_INSTALLATION_ROOT}/tools/bin/qemu-riscv64 ./(BUILD_TESTS)/riscv-llvm/hello_world && \
-		: "
+		bash -c \
+		"qemu-riscv64 ./(BUILD_TESTS)/riscv-gcc/hello_world" | \
+		grep --quiet "Hello world!"
+	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
+		bash -c \
+		"qemu-riscv64 ./(BUILD_TESTS)/riscv-llvm/hello_world" | \
+		grep --quiet "Hello world!"
+	touch $@
+
+$(BUILD_TESTS)/riscv-isa-sim: $(BUILD_TESTS)/riscv-gcc/hello_world $(BUILD_TESTS)/riscv-llvm/hello_world
+	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
+		bash -c \
+		"spike pk ./(BUILD_TESTS)/riscv-gcc/hello_world" | \
+		grep --quiet "Hello world!"
+	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
+		bash -c \
+		"spike pk ./(BUILD_TESTS)/riscv-llvm/hello_world" | \
+		grep --quiet "Hello world!"
 	touch $@
 
 $(BUILD_TESTS)/clang_tidy: $(BUILD_TESTS)/gcc/hello_world $(BUILD_TESTS)/llvm/hello_world

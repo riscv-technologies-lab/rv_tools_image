@@ -36,6 +36,7 @@ fi
 
 set +o nounset
 
+echo "export PATH=${PATH}:${RISCV_TOOLS_PREFIX}/bin" >> /etc/bash.bashrc
 echo "source ${SCDT_INSTALLATION_ROOT}/env.sh &>/dev/null" >> "/etc/bash.bashrc"
 
 if [[ $# -gt 0 ]]; then

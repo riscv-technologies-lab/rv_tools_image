@@ -34,6 +34,14 @@ COPY ubuntu_22/install_scdt.sh ./
 RUN ./install_scdt.sh
 ENV SCDT_INSTALLATION_ROOT "/opt/sc-dt"
 
+ENV RISCV_TOOLS_PREFIX "/opt/riscv-tools"
+
+COPY ubuntu_22/install_spike.sh ./
+RUN ./install_spike.sh
+
+COPY ubuntu_22/install_pk.sh ./
+RUN ./install_pk.sh
+
 COPY ubuntu_22/config_system.sh ./
 RUN ./config_system.sh
 
