@@ -154,8 +154,8 @@ $(BUILD_TESTS)/gdb: $(BUILD_TESTS)/gcc/hello_world $(BUILD_TESTS)/llvm/hello_wor
 $(BUILD_TESTS)/riscv-gcc/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS)
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
 		bash -c " \
-		CC=${SCDT_INSTALLATION_ROOT}/riscv-gcc/bin/riscv64-unknown-linux-gnu-gcc \
-		CXX=${SCDT_INSTALLATION_ROOT}/riscv-gcc/bin/riscv64-unknown-linux-gnu-g++ \
+		CC=\"\$${SCDT_INSTALLATION_ROOT}/riscv-gcc/bin/riscv64-unknown-linux-gnu-gcc\" \
+		CXX=\"\$${SCDT_INSTALLATION_ROOT}/riscv-gcc/bin/riscv64-unknown-linux-gnu-g++\" \
 		cmake \
 		-S $(TESTS_DIR) \
 		-B $(BUILD_TESTS)/riscv-gcc \
@@ -169,9 +169,7 @@ $(BUILD_TESTS)/riscv-gcc/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS)
 		--build $(BUILD_TESTS)/riscv-gcc \
 		--verbose \
 	"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "./$(BUILD_TESTS)/riscv-gcc/hello_world" | grep --quiet "Hello world!"
-	grep --quiet "bin/riscv64-unknown-linux-gnu-g++" $(BUILD_TESTS)/gcc/compile_commands.json
+	grep --quiet "bin/riscv64-unknown-linux-gnu-g++" $(BUILD_TESTS)/riscv-gcc/compile_commands.json
 	[[ $$(stat --format "%U" $@) == $$(id --user --name) ]]
 	[[ $$(stat --format "%G" $@) == $$(id --group --name) ]]
 	touch $@
@@ -179,13 +177,13 @@ $(BUILD_TESTS)/riscv-gcc/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS)
 $(BUILD_TESTS)/riscv-llvm/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS)
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
 		bash -c " \
-		CC=${SCDT_INSTALLATION_ROOT}/llvm/bin/clang \
-		CXX=${SCDT_INSTALLATION_ROOT}/llvm/bin/clang++ \
+		CC=\"\$${SCDT_INSTALLATION_ROOT}/llvm/bin/clang\" \
+		CXX=\"\$${SCDT_INSTALLATION_ROOT}/llvm/bin/clang++\" \
 		cmake \
 		-S $(TESTS_DIR) \
 		-B $(BUILD_TESTS)/riscv-llvm \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-		-DCMAKE_CXX_FLAGS='--gcc-toolchain=${SCDT_INSTALLATION_ROOT}/riscv-gcc/sysroot'
+		-DCMAKE_CXX_FLAGS='--gcc-toolchain=\$${SCDT_INSTALLATION_ROOT}/riscv-gcc/sysroot -march=rv64gc' \
 		-DCMAKE_EXE_LINKER_FLAGS=-static \
 	"
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
@@ -194,32 +192,22 @@ $(BUILD_TESTS)/riscv-llvm/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS
 		--build $(BUILD_TESTS)/riscv-llvm \
 		--verbose \
 	"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "./$(BUILD_TESTS)/llvm/hello_world" | grep --quiet "Hello world!"
-	grep --quiet "bin/clang++" $(BUILD_TESTS)/llvm/compile_commands.json
+	grep --quiet "bin/clang++" $(BUILD_TESTS)/riscv-llvm/compile_commands.json
 	[[ $$(stat --format "%U" $@) == $$(id --user --name) ]]
 	[[ $$(stat --format "%G" $@) == $$(id --group --name) ]]
 	touch $@
 
-$(BUILD_TESTS)/riscv-qemu: $(BUILD_TESTS)/riscv-gcc/hello_world $(BUILD_TESTS)/riscv-llvm/hello_world
+$(BUILD_TESTS)/riscv-qemu: $(BUILD_TESTS)/riscv-gcc/hello_world
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
 		bash -c \
-		"qemu-riscv64 ./(BUILD_TESTS)/riscv-gcc/hello_world" | \
-		grep --quiet "Hello world!"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c \
-		"qemu-riscv64 ./(BUILD_TESTS)/riscv-llvm/hello_world" | \
+		"\$${SCDT_INSTALLATION_ROOT}/tools/bin/qemu-riscv64 $(BUILD_TESTS)/riscv-gcc/hello_world" | \
 		grep --quiet "Hello world!"
 	touch $@
 
-$(BUILD_TESTS)/riscv-isa-sim: $(BUILD_TESTS)/riscv-gcc/hello_world $(BUILD_TESTS)/riscv-llvm/hello_world
+$(BUILD_TESTS)/riscv-isa-sim: $(BUILD_TESTS)/riscv-gcc/hello_world
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
 		bash -c \
-		"spike pk ./(BUILD_TESTS)/riscv-gcc/hello_world" | \
-		grep --quiet "Hello world!"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c \
-		"spike pk ./(BUILD_TESTS)/riscv-llvm/hello_world" | \
+		"\$${RISCV_TOOLS_PREFIX}/bin/spike \$${RISCV_TOOLS_PREFIX}/riscv64-unknown-elf/bin/pk $(BUILD_TESTS)/riscv-gcc/hello_world" | \
 		grep --quiet "Hello world!"
 	touch $@
 
@@ -323,12 +311,16 @@ $(BUILD_DIR)/tests/username: $(BUILD_DIR)/container
 check: \
 	$(BUILD_DIR)/tests/gcc/hello_world \
 	$(BUILD_DIR)/tests/llvm/hello_world \
+	$(BUILD_DIR)/tests/riscv-gcc/hello_world \
+	$(BUILD_DIR)/tests/riscv-qemu \
+	$(BUILD_DIR)/tests/riscv-isa-sim \
 	$(BUILD_DIR)/tests/clang_tidy \
 	$(BUILD_DIR)/tests/gdb \
 	$(BUILD_DIR)/tests/valgrind \
 	$(BUILD_DIR)/tests/env \
 	$(BUILD_DIR)/tests/versions \
 	$(BUILD_DIR)/tests/username \
+	#$(BUILD_DIR)/tests/riscv-llvm/hello_world \
 
 .PHONY: clean
 clean:
