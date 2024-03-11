@@ -212,7 +212,7 @@ $(BUILD_TESTS)/riscv-isa-sim: $(BUILD_TESTS)/riscv-gcc/hello_world
 	touch $@
 
 $(BUILD_TESTS)/gem5:
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
+	docker exec --user $(USER_NAME) --workdir $$(pwd)/$(BUILD_TESTS) $(CONTAINER_NAME) \
 		bash -c \
 		"gem5 /opt/gem5/configs/learning_gem5/part1/simple-riscv.py" | \
 		grep --quiet "Hello world!"
