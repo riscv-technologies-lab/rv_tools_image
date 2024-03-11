@@ -211,6 +211,13 @@ $(BUILD_TESTS)/riscv-isa-sim: $(BUILD_TESTS)/riscv-gcc/hello_world
 		grep --quiet "Hello world!"
 	touch $@
 
+$(BUILD_TESTS)/gem5:
+	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
+		bash -c \
+		"gem5 /opt/gem5/configs/learning_gem5/part1/simple-riscv.py" | \
+		grep --quiet "Hello world!"
+	touch $@
+
 $(BUILD_TESTS)/clang_tidy: $(BUILD_TESTS)/gcc/hello_world $(BUILD_TESTS)/llvm/hello_world
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
 		bash -c " \
@@ -314,6 +321,7 @@ check: \
 	$(BUILD_DIR)/tests/riscv-gcc/hello_world \
 	$(BUILD_DIR)/tests/riscv-qemu \
 	$(BUILD_DIR)/tests/riscv-isa-sim \
+	$(BUILD_DIR)/tests/gem5 \
 	$(BUILD_DIR)/tests/clang_tidy \
 	$(BUILD_DIR)/tests/gdb \
 	$(BUILD_DIR)/tests/valgrind \

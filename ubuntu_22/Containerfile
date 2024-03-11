@@ -42,6 +42,9 @@ RUN ./install_spike.sh
 COPY ubuntu_22/install_pk.sh ./
 RUN ./install_pk.sh
 
+COPY ubuntu_22/install_gem5.sh ./
+RUN ./install_gem5.sh
+
 COPY ubuntu_22/config_system.sh ./
 RUN ./config_system.sh
 
