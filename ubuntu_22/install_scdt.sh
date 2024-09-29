@@ -13,6 +13,5 @@ SC_DT_VERSION="sc-dt-2024.08"
 FILENAME="${SC_DT_VERSION}.tar.gz"
 gdown ${FILEID}
 
-echo "$(ls)"
 tar -xf ${FILENAME} -C /opt
 rm -rf ${FILENAME}

@@ -7,8 +7,9 @@ set -o xtrace
 
 PK_URL="https://github.com/riscv-software-src/riscv-pk.git"
 PK_DIR="pk-src"
+PK_TAG="v1.0.0"
 
-git clone "${PK_URL}" "${PK_DIR}"
+git clone "${PK_URL}" "${PK_DIR}" --depth=1 -b "${PK_TAG}"
 cd "${PK_DIR}"
 
 set +o nounset

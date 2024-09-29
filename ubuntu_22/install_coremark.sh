@@ -8,7 +8,7 @@ set -o xtrace
 COREMARK_URL="https://github.com/eembc/coremark.git"
 COREMARK_DIR="/opt/coremark"
 
-git clone "${COREMARK_URL}" "${COREMARK_DIR}"
+git clone "${COREMARK_URL}" "${COREMARK_DIR}" --depth=1
 cd "${COREMARK_DIR}"
 
 set +o nounset

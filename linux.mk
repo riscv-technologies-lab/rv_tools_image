@@ -18,7 +18,7 @@ IMAGE_NAMETAG := $(IMAGE_NAME):$(IMAGE_TAG)
 TESTS_DIR := tests
 VCS_REF != git rev-parse HEAD
 
-DEPS != grep --perl-regexp --only-matching "COPY \K.*?(?= \S+$$)" $(CONTAINERFILE)
+DEPS != grep --perl-regexp --only-matching "COPY \K[^-]*?(?= \S+$$)" $(CONTAINERFILE)
 DEPS += $(CONTAINERFILE)
 
 HELLO_WORLD_DEPS != find $(TESTS_DIR) -type f,l
@@ -97,7 +97,6 @@ $(BUILD_TESTS)/gcc/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS)
 		cmake \
 		-S $(TESTS_DIR) \
 		-B $(BUILD_TESTS)/gcc \
-		-G Ninja \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 	"
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
@@ -113,29 +112,6 @@ $(BUILD_TESTS)/gcc/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS)
 	[[ $$(stat --format "%G" $@) == $$(id --group --name) ]]
 	touch $@
 
-$(BUILD_TESTS)/llvm/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS)
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c " \
-		CC=clang \
-		CXX=clang++ \
-		cmake \
-		-S $(TESTS_DIR) \
-		-B $(BUILD_TESTS)/llvm \
-		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-	"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c " \
-		cmake \
-		--build $(BUILD_TESTS)/llvm \
-		--verbose \
-	"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "./$(BUILD_TESTS)/llvm/hello_world" | grep --quiet "Hello world!"
-	grep --quiet "bin/clang++" $(BUILD_TESTS)/llvm/compile_commands.json
-	[[ $$(stat --format "%U" $@) == $$(id --user --name) ]]
-	[[ $$(stat --format "%G" $@) == $$(id --group --name) ]]
-	touch $@
-
 $(BUILD_TESTS)/valgrind: $(BUILD_TESTS)/gcc/hello_world $(BUILD_TESTS)/llvm/hello_world
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
 		bash -c "valgrind $(BUILD_TESTS)/gcc/hello_world"
@@ -143,23 +119,14 @@ $(BUILD_TESTS)/valgrind: $(BUILD_TESTS)/gcc/hello_world $(BUILD_TESTS)/llvm/hell
 		bash -c "valgrind $(BUILD_TESTS)/llvm/hello_world"
 	touch $@
 
-$(BUILD_TESTS)/gdb: $(BUILD_TESTS)/gcc/hello_world $(BUILD_TESTS)/llvm/hello_world
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c " \
-		gdb -ex run -ex quit ./$(BUILD_TESTS)/gcc/hello_world && \
-		gdb -ex run -ex quit ./$(BUILD_TESTS)/llvm/hello_world && \
-		: "
-	touch $@
-
 $(BUILD_TESTS)/riscv-gcc/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS)
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
 		bash -c " \
-		CC=\"\$${SCDT_INSTALLATION_ROOT}/riscv-gcc/bin/riscv64-unknown-linux-gnu-gcc\" \
-		CXX=\"\$${SCDT_INSTALLATION_ROOT}/riscv-gcc/bin/riscv64-unknown-linux-gnu-g++\" \
+		CC=\"\$${SCDT_INSTALLATION_ROOT}/riscv-gcc/bin/riscv64-unknown-elf-gcc\" \
+		CXX=\"\$${SCDT_INSTALLATION_ROOT}/riscv-gcc/bin/riscv64-unknown-elf-g++\" \
 		cmake \
 		-S $(TESTS_DIR) \
 		-B $(BUILD_TESTS)/riscv-gcc \
-		-G Ninja \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 		-DCMAKE_EXE_LINKER_FLAGS=-static \
 	"
@@ -169,7 +136,7 @@ $(BUILD_TESTS)/riscv-gcc/hello_world: $(BUILD_DIR)/container $(HELLO_WORLD_DEPS)
 		--build $(BUILD_TESTS)/riscv-gcc \
 		--verbose \
 	"
-	grep --quiet "bin/riscv64-unknown-linux-gnu-g++" $(BUILD_TESTS)/riscv-gcc/compile_commands.json
+	grep --quiet "bin/riscv64-unknown-elf-g++" $(BUILD_TESTS)/riscv-gcc/compile_commands.json
 	[[ $$(stat --format "%U" $@) == $$(id --user --name) ]]
 	[[ $$(stat --format "%G" $@) == $$(id --group --name) ]]
 	touch $@
@@ -214,16 +181,8 @@ $(BUILD_TESTS)/riscv-isa-sim: $(BUILD_TESTS)/riscv-gcc/hello_world
 $(BUILD_TESTS)/gem5:
 	docker exec --user $(USER_NAME) --workdir $$(pwd)/$(BUILD_TESTS) $(CONTAINER_NAME) \
 		bash -c \
-		"gem5 /opt/gem5/configs/learning_gem5/part1/simple-riscv.py" | \
+		"\$${RISCV_TOOLS_PREFIX}/bin/gem5 /opt/gem5/configs/learning_gem5/part1/simple-riscv.py" | \
 		grep --quiet "Hello world!"
-	touch $@
-
-$(BUILD_TESTS)/clang_tidy: $(BUILD_TESTS)/gcc/hello_world $(BUILD_TESTS)/llvm/hello_world
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c " \
-		clang-tidy -p $(BUILD_TESTS)/gcc $(TESTS_DIR)/hello_world.cpp && \
-		clang-tidy -p $(BUILD_TESTS)/llvm $(TESTS_DIR)/hello_world.cpp && \
-		: "
 	touch $@
 
 $(BUILD_TESTS)/env: $(BUILD_DIR)/container
@@ -270,21 +229,11 @@ $(BUILD_TESTS)/env: $(BUILD_DIR)/container
 
 $(BUILD_TESTS)/versions: $(BUILD_DIR)/container
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "cmake --version" | grep --perl-regexp --quiet "3\.26\.\d+"
+		bash -c "cmake --version" | grep --perl-regexp --quiet "3\.22\.\d+"
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "gcc --version" | grep --perl-regexp --quiet "13\.\d+\.\d+"
+		bash -c "gcc --version" | grep --perl-regexp --quiet "11\.\d+\.\d+"
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "g++ --version" | grep --perl-regexp --quiet "13\.\d+\.\d+"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "clang --version" | grep --perl-regexp --quiet "17\.\d+\.\d+"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "clang++ --version" | grep --perl-regexp --quiet "17\.\d+\.\d+"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "clang-format --version" | grep --perl-regexp --quiet "17\.\d+\.\d+"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "clang-tidy --version" | grep --perl-regexp --quiet "17\.\d+\.\d+"
-	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -c "FileCheck --version" | grep --perl-regexp --quiet "17\.\d+\.\d+"
+		bash -c "g++ --version" | grep --perl-regexp --quiet "11\.\d+\.\d+"
 	docker exec --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
 		bash -c "python3 --version" | grep --perl-regexp --quiet "3\.10\.\d+"
 	bash_version=$$(docker exec --user $(USER_NAME) --workdir "$$(pwd)" $(CONTAINER_NAME) \
@@ -295,7 +244,10 @@ $(BUILD_TESTS)/versions: $(BUILD_DIR)/container
 		{ echo 2.0.0; echo $$git_version; } | sort --version-sort --check &> /dev/null
 	echo "riscv64-unknown-linux-gnu-gcc --version" | \
 		docker exec -i --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
-		bash -i | grep --perl-regexp --quiet "12\.\d+\.\d+"
+		bash -i | grep --perl-regexp --quiet "13\.\d+\.\d+"
+	echo "riscv64-unknown-elf-gcc --version" | \
+		docker exec -i --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
+		bash -i | grep --perl-regexp --quiet "13\.\d+\.\d+"
 	echo "clang --version" | \
 		docker exec -i --user $(USER_NAME) --workdir $$(pwd) $(CONTAINER_NAME) \
 		bash -i | grep --perl-regexp --quiet "Target: riscv64-unknown-linux-gnu"
@@ -317,18 +269,14 @@ $(BUILD_DIR)/tests/username: $(BUILD_DIR)/container
 .PHONY: check
 check: \
 	$(BUILD_DIR)/tests/gcc/hello_world \
-	$(BUILD_DIR)/tests/llvm/hello_world \
 	$(BUILD_DIR)/tests/riscv-gcc/hello_world \
 	$(BUILD_DIR)/tests/riscv-qemu \
 	$(BUILD_DIR)/tests/riscv-isa-sim \
 	$(BUILD_DIR)/tests/gem5 \
-	$(BUILD_DIR)/tests/clang_tidy \
-	$(BUILD_DIR)/tests/gdb \
-	$(BUILD_DIR)/tests/valgrind \
 	$(BUILD_DIR)/tests/env \
 	$(BUILD_DIR)/tests/versions \
 	$(BUILD_DIR)/tests/username \
-	#$(BUILD_DIR)/tests/riscv-llvm/hello_world \
+	#$(BUILD_DIR)/tests/riscv-llvm/hello_world
 
 .PHONY: clean
 clean:

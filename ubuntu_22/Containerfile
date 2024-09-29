@@ -1,6 +1,9 @@
-FROM docker.io/library/ubuntu:jammy-20230126
+FROM docker.io/library/ubuntu:jammy-20230126 AS build
 
 WORKDIR /etc/configs
+
+COPY ubuntu_22/install_runtime_deps.sh ./
+RUN ./install_runtime_deps.sh
 
 COPY ubuntu_22/install_basic_utils.sh ./
 RUN ./install_basic_utils.sh
@@ -8,27 +11,11 @@ RUN ./install_basic_utils.sh
 COPY ubuntu_22/install_gcc.sh ./
 RUN ./install_gcc.sh
 
-COPY ubuntu_22/install_llvm.sh ./
-RUN ./install_llvm.sh
-
 COPY ubuntu_22/install_gnu_tools.sh ./
 RUN ./install_gnu_tools.sh
 
-COPY ubuntu_22/install_valgrind.sh ./
-RUN ./install_valgrind.sh
-
-COPY ubuntu_22/install_cmake.sh ./
-RUN ./install_cmake.sh
-
-COPY ubuntu_22/install_vcpkg.sh ./
-RUN ./install_vcpkg.sh
-ENV VCPKG_INSTALLATION_ROOT "/usr/local/vcpkg"
-
 COPY ubuntu_22/install_python.sh ./
 RUN ./install_python.sh
-
-COPY ubuntu_22/install_nodejs.sh ./
-RUN ./install_nodejs.sh
 
 COPY ubuntu_22/install_scdt.sh ./
 RUN ./install_scdt.sh
@@ -36,23 +23,34 @@ ENV SCDT_INSTALLATION_ROOT "/opt/sc-dt"
 
 ENV RISCV_TOOLS_PREFIX "/opt/riscv-tools"
 
+COPY ubuntu_22/install_gem5.sh ./
+RUN ./install_gem5.sh
+
 COPY ubuntu_22/install_spike.sh ./
 RUN ./install_spike.sh
 
 COPY ubuntu_22/install_pk.sh ./
 RUN ./install_pk.sh
 
-COPY ubuntu_22/install_gem5.sh ./
-RUN ./install_gem5.sh
-
 COPY ubuntu_22/install_coremark.sh ./
 RUN ./install_coremark.sh
 
-COPY ubuntu_22/config_system.sh ./
-RUN ./config_system.sh
+FROM docker.io/library/ubuntu:jammy-20230126
 
-COPY license.md ./
-COPY ubuntu_22/entrypoint.sh ./
+COPY --from=build /opt /opt
+
+COPY ubuntu_22/install_runtime_deps.sh /etc/configs/
+RUN /etc/configs/install_runtime_deps.sh
+
+COPY ubuntu_22/install_runtime_only_deps.sh /etc/configs/
+RUN /etc/configs/install_runtime_only_deps.sh
+
+COPY license.md /etc/configs/
+
+ENV SCDT_INSTALLATION_ROOT "/opt/sc-dt"
+ENV RISCV_TOOLS_PREFIX "/opt/riscv-tools"
+
+COPY ubuntu_22/entrypoint.sh /etc/configs/
 
 WORKDIR /root
 ENTRYPOINT ["/etc/configs/entrypoint.sh"]
